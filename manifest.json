@@ -2,7 +2,7 @@
 	"name": "cni-tsnr-map",
 	"label": "CNI: tSNR map",
 	"description": "Calculate temporal SNR of a time series in a 4D NIFTI.",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"inputs": {
 		"nifti": {
 			"base": "file",
@@ -29,7 +29,7 @@
 	"author": "Hua Wu",
 	"maintainer": "Hua Wu",
 	"license": "Other",
-	"source": "https://github.com/huawu/tsnr",
+	"source": "https://github.com/huawu02/tsnr",
 	"url": "",
 	"custom": {
 		"gear-builder": {
