@@ -1,0 +1,43 @@
+{
+	"name": "cni-tsnr-map",
+	"label": "CNI: tSNR map",
+	"description": "Calculate temporal SNR of a time series in a 4D NIFTI.",
+	"version": "0.1.1",
+	"inputs": {
+		"nifti": {
+			"base": "file",
+			"description": "Input 4D NIFTI file",
+			"type": {
+				"enum": [
+					"nifti"
+				]
+			}
+		}
+	},
+	"config": {
+		"discarded_volume": {
+			"default": 3,
+			"description": "The number of volume to discard from the beginning of the time series",
+			"type": "number"
+		},
+		"mask_threshold": {
+			"default": 0.5,
+			"description": "Fractional intensity threshold (0-\u003e1); smaller values give larger brain outline estimates",
+			"type": "number"
+		}
+	},
+	"author": "Hua Wu",
+	"maintainer": "Hua Wu",
+	"license": "Other",
+	"source": "https://github.com/huawu/tsnr",
+	"url": "",
+	"custom": {
+		"gear-builder": {
+			"category": "converter",
+			"image": "cni-tsnr-map"
+		},
+		"flywheel": {
+			"suite": "Stanford CNI"
+		}
+	}
+}
