@@ -1,0 +1,2 @@
+# tsnr
+Temporal SNR calculation
