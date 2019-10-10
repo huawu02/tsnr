@@ -19,8 +19,11 @@ if __name__ == '__main__':
 
     basename = (os.path.basename(args.infile)).split('.')[0]
     outbase = args.outbase
-    if args.outbase == '':
-        outbase = basename+'_tsnr'
+    if outbase == '':
+        outbase = basename
+    outbase_tsnr = outbase+'_tsnr'
+    outbase_tmean = outbase+'_tmean'
+    outbase_noise = outbase+'_noise'
     masked_name = basename+'_masked.nii.gz'
     mask_name = basename+'_masked_mask.nii.gz'
 
@@ -31,10 +34,16 @@ if __name__ == '__main__':
     ni = nb.load(args.infile)
     d = ni.get_data()
     d = d[...,args.discard_vol:]  # discard the first volumes
-    tsnr = np.multiply(np.mean(d,axis=3) / np.std(d,axis=3), mask)
-    tsnr[np.isnan(tsnr)] = 0
-    ni_snr = nb.Nifti1Image(tsnr, ni.get_affine())
-    nb.save(ni_snr, outbase+'.nii.gz')
+    noise = np.multiply(np.std(d,axis=3),mask)
+    tmean = np.multiply(np.mean(d,axis=3),mask)
+    tsnr = np.zeros(noise.shape)
+    tsnr[mask] = np.divide(tmean[mask], noise[mask])
+    ni_noise = nb.Nifti1Image(noise, ni.get_affine())
+    nb.save(ni_noise, outbase_noise+'.nii.gz')
+    ni_tmean = nb.Nifti1Image(tmean, ni.get_affine())
+    nb.save(ni_tmean, outbase_tmean+'.nii.gz')
+    ni_tsnr = nb.Nifti1Image(tsnr, ni.get_affine())
+    nb.save(ni_tsnr, outbase_tsnr+'.nii.gz')
 
     os.remove(masked_name)
     os.remove(mask_name)

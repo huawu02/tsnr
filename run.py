@@ -20,5 +20,5 @@ if __name__ == '__main__':
 
     # Set output name
     outdir = '/flywheel/v0/output'
-    outpath = os.path.join(outdir, basename+'_tsnr')
+    outpath = os.path.join(outdir, basename)
     os.system('python /flywheel/v0/tsnr.py %s -o %s -d %d -f %f' %(infile, outpath, discard_vol, mask_threshold))
