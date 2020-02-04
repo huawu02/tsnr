@@ -1,16 +1,18 @@
-# Start with neurodebian trusty 14.04
+# Start with neurodebian trusty 16.04
 
-FROM neurodebian:trusty
+FROM neurodebian:xenial
 MAINTAINER Hua Wu <huawu@stanford.edu>
 
 # Install dependencies
 RUN echo deb http://neurodeb.pirsquared.org data main contrib non-free >> /etc/apt/sources.list.d/neurodebian.sources.list
-RUN echo deb http://neurodeb.pirsquared.org trusty main contrib non-free >> /etc/apt/sources.list.d/neurodebian.sources.list
+RUN echo deb http://neurodeb.pirsquared.org xenial main contrib non-free >> /etc/apt/sources.list.d/neurodebian.sources.list
 RUN apt-get update && apt-get -y install \
     python-dev python-pip \
-    fsl-5.0-core
+    afni
+    #fsl-5.0-core
+
 RUN pip install --upgrade pip \
-    && pip install numpy==1.11.0 \
+    && pip install numpy==1.16.4 \
     && pip install nibabel==2.1.0
 #Run pip install nipype==0.10.0
 

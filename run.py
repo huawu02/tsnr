@@ -16,9 +16,12 @@ if __name__ == '__main__':
     infile = config['inputs']['nifti']['location']['path']
     basename = (os.path.basename(infile)).split('.')[0]
     discard_vol = config['config']['discarded_volume']
-    mask_threshold = config['config']['mask_threshold']    
+    mask_threshold = config['config']['mask_threshold']
+    roi_size = config['config']['roi_size']
+    save_all_outputs = config['config']['save_all_outputs']
 
     # Set output name
     outdir = '/flywheel/v0/output'
     outpath = os.path.join(outdir, basename)
-    os.system('python /flywheel/v0/tsnr.py %s -o %s -d %d -f %f' %(infile, outpath, discard_vol, mask_threshold))
+    if save_all_outputs:
+        os.system('python /flywheel/v0/tsnr.py %s -o %s -d %d -f %f -r %d --save_all_outputs' %(infile, outpath, discard_vol, mask_threshold, roi_size))

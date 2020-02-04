@@ -1,8 +1,8 @@
 {
 	"name": "cni-tsnr-map",
-	"label": "CNI: tSNR map",
-	"description": "Calculate temporal SNR of a time series in a 4D NIFTI.",
-	"version": "0.1.2",
+	"label": "CNI: temporal SNR analysis",
+	"description": "Calculate signal fluctuation to noise ratio (SFNR), temporal SNR, and radius of decorrelation (from Weisskoff analysis) of a time series in a 4D NIFTI.",
+	"version": "2.1.0",
 	"inputs": {
 		"nifti": {
 			"base": "file",
@@ -24,6 +24,16 @@
 			"default": 0.5,
 			"description": "Fractional intensity threshold (0-\u003e1); smaller values give larger brain outline estimates",
 			"type": "number"
+		},
+		"roi_size": {
+			"default": 21,
+			"description": "Upper limit of ROI length for Weisskoff analysis",
+			"type": "number"
+		},
+		"save_all_outputs": {
+			"default": true,
+			"description": "Save all intermediate results, including raw tSNR, detrended time series, mask, etc",
+			"type": "boolean"
 		}
 	},
 	"author": "Hua Wu",
@@ -33,11 +43,11 @@
 	"url": "",
 	"custom": {
 		"gear-builder": {
-			"category": "converter",
+			"category": "analysis",
 			"image": "cni-tsnr-map"
 		},
-		"flywheel": {
-			"suite": "Stanford CNI"
-		}
+                "flywheel": {
+                        "suite": "Stanford CNI"
+                }
 	}
 }
