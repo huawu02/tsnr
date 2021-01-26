@@ -14,6 +14,7 @@ from scipy import ndimage
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
+from matplotlib.ticker import FormatStrFormatter
 #from nipype.interfaces import fsl
 
 if __name__ == '__main__':
@@ -45,7 +46,8 @@ if __name__ == '__main__':
     sfnr_name = outbase+'_sfnr.nii.gz'
 
     # discard volumes, mask, detrend
-    #os.system("3dTcat -prefix %s %s[%d..$]; 3dAutomask -prefix %s -clfrac %f %s; 3dDetrend -prefix %s -polort %d %s" 
+    # use the second line when running in docker
+    # os.system("3dTcat -prefix %s %s[%d..$]; 3dAutomask -prefix %s -clfrac %f %s; 3dDetrend -prefix %s -polort %d %s" 
     os.system(". /etc/afni/afni.sh; 3dTcat -prefix %s %s[%d..$]; 3dAutomask -prefix %s -clfrac %f %s; 3dDetrend -prefix %s -polort %d %s" 
               %(tseries_name, args.infile, args.discard_vol, 
                 mask_name, args.mask_frac, tseries_name, 
@@ -90,8 +92,10 @@ if __name__ == '__main__':
         res = roi_mean - poly(range(num_tpoints))
         roi_std_detrend.append(np.std(res))
     rdc = roi_std_detrend[0] / roi_std_detrend[args.roi_size-1]
-    roi_signal_mean = roi_mean 
-    roi_signal_mean_fitted = poly(range(num_tpoints))
+    roi_signal_mean = roi_mean / np.mean(roi_mean) # normalize to the temporal mean signal
+    roi_signal_mean_fitted = poly(range(num_tpoints)) / np.mean(roi_mean)
+    roi_residual = roi_signal_mean - roi_signal_mean_fitted
+    roi_temporal_variance = np.std(roi_residual) 
     sfnr_center = np.mean(sfnr[np.where(roi_mask[:,:,:,0])])
     sfnr_edge = np.percentile(sfnr[:,:,center_of_mass[2]][np.where(mask[:,:,center_of_mass[2]])], 95)
     
@@ -101,6 +105,8 @@ if __name__ == '__main__':
             'radius_decorrelation': '%.1f' % rdc,
             'roi_signal_mean': ['%.2f' % x for x in roi_signal_mean],
             'roi_signal_mean_fitted': ['%.2f' % x for x in roi_signal_mean_fitted],
+            'roi_residual': ['%.2f' % x for x in roi_residual],
+            'roi_temporal_variance': '%.5f' % roi_temporal_variance,
             'center_of_mass_x': ['%.4f' % x for x in center_of_mass_t[0, :]],
             'center_of_mass_y': ['%.4f' % x for x in center_of_mass_t[1, :]],
             'center_of_mass_z': ['%.4f' % x for x in center_of_mass_t[2, :]],
@@ -130,10 +136,21 @@ if __name__ == '__main__':
     plt.close()
 
     # plot ROI mean signal of the time series
-    plt.plot((np.arange(num_tpoints) + args.discard_vol + 1) * tr, roi_signal_mean/np.max(roi_signal_mean), label='mean signal')
-    plt.plot((np.arange(num_tpoints) + args.discard_vol + 1) * tr, roi_signal_mean_fitted/np.max(roi_signal_mean), label='fitted mean signal')
-    plt.legend(loc='upper right')
-    plt.ylabel('signal intensity (normalized)'); plt.xlabel('time (s)'); plt.xlim(0, (num_tpoints+1)*tr)
+    fig, ax1 = plt.subplots()
+    p1, = ax1.plot((np.arange(num_tpoints) + args.discard_vol + 1) * tr, roi_signal_mean, label='mean signal')
+    p2, = ax1.plot((np.arange(num_tpoints) + args.discard_vol + 1) * tr, roi_signal_mean_fitted, label='fitted')
+    ax1.set_xlabel('time (s)')
+    ax1.set_xlim(0, (num_tpoints+1)*tr)
+    ax1.set_ylabel('signal intensity (normalized)')
+    ax1.yaxis.set_major_formatter(FormatStrFormatter('%.4f'))
+
+    ax2 = ax1.twinx()
+    p3, = ax2.plot((np.arange(num_tpoints) + args.discard_vol + 1) * tr, roi_residual, label='residual', color='r')
+    ax2.set_ylabel('residual signal (normalized)')
+    lines = [p1, p2, p3]
+    ax2.legend(lines, [l.get_label() for l in lines], loc=1)
+
+    plt.text(0.1, 0.95, 'temporal variation = {:.3f}%'.format(100 * roi_temporal_variance), transform=ax1.transAxes)
     plt.savefig(outbase+'_mean_signal.png', bbox_inches='tight')
     plt.close()
 
