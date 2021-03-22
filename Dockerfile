@@ -7,14 +7,14 @@ MAINTAINER Hua Wu <huawu@stanford.edu>
 RUN echo deb http://neurodeb.pirsquared.org data main contrib non-free >> /etc/apt/sources.list.d/neurodebian.sources.list
 RUN echo deb http://neurodeb.pirsquared.org xenial main contrib non-free >> /etc/apt/sources.list.d/neurodebian.sources.list
 RUN apt-get update && apt-get -y install \
-    python-dev python-pip \
-    afni
-    #fsl-5.0-core
+    python python-pip \
+    afni \
+    fsl-core
 
-RUN pip install --upgrade pip \
+RUN pip install --upgrade pip==20.3 \
     && pip install numpy==1.16.4 \
-    && pip install nibabel==2.1.0
-#Run pip install nipype==0.10.0
+    && pip install nibabel==2.1.0 
+#    && pip install nipype==0.10.0
 
 # Make directory for flywheel spec
 ENV FLYWHEEL /flywheel/v0
