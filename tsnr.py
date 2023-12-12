@@ -47,14 +47,15 @@ if __name__ == '__main__':
     sfnr_name = outbase+'_sfnr.nii.gz'
 
     # reorient the infile to standard RAS coordinates
-    # fsl.Reorient2Std(in_file=args.infile, out_file=reorient_name).run()
+    # use the first line when running locally, use the second line for gear
+    #cmd = "fslreorient2std " + "%s %s" % (args.infile, reorient_name)
     cmd = "fsl5.0-fslreorient2std " + "%s %s" % (args.infile, reorient_name)
     status = os.system(cmd)
     
     
     # discard volumes, mask, detrend
     # use the first line when runnig in local env, use second line when running in docker
-    # os.system("3dTcat -prefix %s %s[%d..$]; 3dAutomask -prefix %s -clfrac %f %s; 3dDetrend -prefix %s -polort %d %s" 
+    #os.system("3dTcat -prefix %s %s[%d..$]; 3dAutomask -prefix %s -clfrac %f %s; 3dDetrend -prefix %s -polort %d %s" 
     os.system(". /etc/afni/afni.sh; 3dTcat -prefix %s %s[%d..$]; 3dAutomask -prefix %s -clfrac %f %s; 3dDetrend -prefix %s -polort %d %s" 
               %(tseries_name, reorient_name, args.discard_vol, 
                 mask_name, args.mask_frac, tseries_name, 
@@ -65,14 +66,31 @@ if __name__ == '__main__':
     tr = ni.get_header()['pixdim'][4]  # TR in seconds
     affine = ni.affine
     tseries = np.asarray(ni.dataobj)
-    noise = nb.load(detrend_name).get_data()
-    mask  = nb.load(mask_name).get_data()
+    noise = np.asanyarray(nb.load(detrend_name).dataobj)
+    mask  = np.asanyarray(nb.load(mask_name).dataobj)
     tmean = np.multiply(np.mean(tseries, axis=3), mask)
     tstd  = np.multiply(np.std(tseries, axis=3), mask)
     nstd  = np.multiply(np.std(noise, axis=3), mask)
     tsnr  = np.nan_to_num(np.multiply(np.divide(tmean, tstd), mask))
     sfnr  = np.nan_to_num(np.multiply(np.divide(tmean, nstd), mask))
     
+    ni_sfnr  = nb.Nifti1Image(sfnr,  ni.get_affine())
+    nb.save(ni_sfnr,  sfnr_name)
+    if args.save_all_outputs:
+        ni_tmean = nb.Nifti1Image(tmean, ni.affine)
+        ni_nstd  = nb.Nifti1Image(nstd,  ni.affine)
+        ni_tstd  = nb.Nifti1Image(tstd,  ni.affine)
+        ni_tsnr  = nb.Nifti1Image(tsnr,  ni.affine)
+        nb.save(ni_tmean, tmean_name)
+        nb.save(ni_nstd,  nstd_name)
+        nb.save(ni_tstd,  tstd_name)
+        nb.save(ni_tsnr,  tsnr_name)
+    else:
+        os.remove(reorient_name)
+        os.remove(tseries_name)
+        os.remove(detrend_name)
+        os.remove(mask_name)
+
     # center of mass drift 
     num_tpoints = noise.shape[3]
     center_of_mass_tseries_coord = np.zeros((3, num_tpoints))
@@ -115,24 +133,28 @@ if __name__ == '__main__':
     roi_residual = roi_signal_mean - roi_signal_mean_fitted
     roi_temporal_variance = np.std(roi_residual) 
     sfnr_center = np.mean(sfnr[np.where(roi_mask[:,:,:,0])])
-    sfnr_edge = np.percentile(sfnr[:,:,center_of_mass[2]][np.where(mask[:,:,center_of_mass[2]])], 95)
     tsnr_center = np.mean(tsnr[np.where(roi_mask[:,:,:,0])])
-    tsnr_edge = np.percentile(tsnr[:,:,center_of_mass[2]][np.where(mask[:,:,center_of_mass[2]])], 95)
-    
+    if mask.ndim == 3:
+        sfnr_edge = np.percentile(sfnr[:,:,center_of_mass[2]][np.where(mask[:,:,center_of_mass[2]])], 95)
+        tsnr_edge = np.percentile(tsnr[:,:,center_of_mass[2]][np.where(mask[:,:,center_of_mass[2]])], 95)
+    elif mask.ndim == 2:
+        sfnr_edge = np.percentile(sfnr[:,:,center_of_mass[2]][np.where(mask)], 95)
+        tsnr_edge = np.percentile(tsnr[:,:,center_of_mass[2]][np.where(mask)], 95)
+
     # save data
     data = {'roi_size': args.roi_size, 
-            'roi_std': ['%.4f' % x for x in roi_std_detrend], 
-            'radius_decorrelation': '%.1f' % rdc,
-            'roi_signal_mean': ['%.4f' % x for x in roi_signal_mean],
-            'roi_signal_mean_fitted': ['%.4f' % x for x in roi_signal_mean_fitted],
-            'roi_residual': ['%.4f' % x for x in roi_residual],
+            'roi_std': ['%.6f' % x for x in roi_std_detrend], 
+            'radius_decorrelation': '%.2f' % rdc,
+            'roi_signal_mean': ['%.6f' % x for x in roi_signal_mean],
+            'roi_signal_mean_fitted': ['%.6f' % x for x in roi_signal_mean_fitted],
+            'roi_residual': ['%.6f' % x for x in roi_residual],
             'roi_temporal_variance': '%.6f' % roi_temporal_variance,
-            'center_of_mass_x': ['%.4f' % x for x in center_of_mass_tseries_coord[0, :]],
-            'center_of_mass_y': ['%.4f' % x for x in center_of_mass_tseries_coord[1, :]],
-            'center_of_mass_z': ['%.4f' % x for x in center_of_mass_tseries_coord[2, :]],
-            'center_of_mass_drift_x': ['%.4f' % x for x in center_of_mass_drift[0, :]],
-            'center_of_mass_drift_y': ['%.4f' % x for x in center_of_mass_drift[1, :]],
-            'center_of_mass_drift_z': ['%.4f' % x for x in center_of_mass_drift[2, :]],
+            'center_of_mass_x': ['%.6f' % x for x in center_of_mass_tseries_coord[0, :]],
+            'center_of_mass_y': ['%.6f' % x for x in center_of_mass_tseries_coord[1, :]],
+            'center_of_mass_z': ['%.6f' % x for x in center_of_mass_tseries_coord[2, :]],
+            'center_of_mass_drift_x': ['%.6f' % x for x in center_of_mass_drift[0, :]],
+            'center_of_mass_drift_y': ['%.6f' % x for x in center_of_mass_drift[1, :]],
+            'center_of_mass_drift_z': ['%.6f' % x for x in center_of_mass_drift[2, :]],
             'center_of_mass_drift_rate': ['%.6f' % x for x in drift_rate],
             'sfnr_center': '%.2f' % sfnr_center,
             'sfnr_edge': '%.2f' % sfnr_edge,
@@ -192,21 +214,4 @@ if __name__ == '__main__':
     plt.text(0.1, 0.999999999, 'drift rate (mm/s)\nx = %.1e \ny = %.1e \nz = %.1e' %(drift_rate[0], drift_rate[1], drift_rate[2]), transform=ax1.transAxes)
     plt.savefig(outbase+'_cm_drift.png', bbox_inches='tight')
     plt.close()
-
-    ni_sfnr  = nb.Nifti1Image(sfnr,  ni.get_affine())
-    nb.save(ni_sfnr,  sfnr_name)
-    if args.save_all_outputs:
-        ni_tmean = nb.Nifti1Image(tmean, ni.affine)
-        ni_nstd  = nb.Nifti1Image(nstd,  ni.affine)
-        ni_tstd  = nb.Nifti1Image(tstd,  ni.affine)
-        ni_tsnr  = nb.Nifti1Image(tsnr,  ni.affine)
-        nb.save(ni_tmean, tmean_name)
-        nb.save(ni_nstd,  nstd_name)
-        nb.save(ni_tstd,  tstd_name)
-        nb.save(ni_tsnr,  tsnr_name)
-    else:
-        os.remove(reorient_name)
-        os.remove(tseries_name)
-        os.remove(detrend_name)
-        os.remove(mask_name)
 

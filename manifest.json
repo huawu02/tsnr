@@ -1,8 +1,8 @@
 {
 	"name": "cni-tsnr-map",
-	"label": "cni-tsnr-map",
+	"label": "Temporal SNR map",
 	"description": "Calculate signal fluctuation to noise ratio (SFNR), temporal SNR, and radius of decorrelation (from Weisskoff analysis) of a time series in a 4D NIFTI.",
-	"version": "2.2.0",
+	"version": "2.2.1",
 	"inputs": {
 		"nifti": {
 			"base": "file",
@@ -46,7 +46,7 @@
 			"category": "analysis",
 			"image": "cni-tsnr-map"
 		},
-                "flywheel": {
+                "flywheel":{
                         "suite": "Stanford CNI"
                 }
 	}
